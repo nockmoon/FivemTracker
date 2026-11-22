@@ -15,6 +15,10 @@ $('t').onclick=()=>{reg=!reg;$('i').hidden=$('n').hidden=!reg;$('n').required=re
 $('f').onsubmit=async e=>{e.preventDefault();$('e').textContent='';$('b').disabled=true;const email=$('m').value.trim(),password=$('p').value;
  const r=reg?await sb.auth.signUp({email,password,options:{data:{name:$('n').value.trim(),invite:$('i').value.trim()}}}):await sb.auth.signInWithPassword({email,password});
  $('b').disabled=false;
- if(r.error){$('e').textContent=reg?"Inscription refusée : code d'invitation incorrect, pseudo ou email déjà utilisé.":'Identifiants incorrects.';return}
+ if(r.error){
+  console.error(r.error);
+  $('e').textContent = r.error.message;
+  return;
+}
  if(!r.data.session){$('e').textContent="Compte créé. Confirme ton email, puis connecte-toi (ou désactive la confirmation dans Supabase).";return}
  location.href='index.html'};</script></body></html>
