@@ -1,24 +1,133 @@
-<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Connexion · FiveM Tracker</title><meta name="viewport" content="width=device-width,initial-scale=1">
-<style>:root{color-scheme:dark}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0c0c0e;color:#e8e8ea;font:14px system-ui,sans-serif}
-form{background:#1a1b1f;border:1px solid #2c2e34;border-radius:14px;padding:24px;width:min(340px,92vw);display:grid;gap:10px}h2{margin:0}b{color:#e5383b}
-input,button{font:inherit;color:inherit;background:#23252a;border:1px solid #2c2e34;border-radius:8px;padding:10px}button{cursor:pointer}.p{background:#e5383b;border-color:#e5383b;font-weight:700;color:#fff}
-a{color:#8b8d94;cursor:pointer;font-size:12px;text-align:center}#e{color:#f4c430;min-height:1em}</style></head><body>
-<form id="f"><h2>🚗 FiveM <b>Tracker</b></h2><input id="m" type="email" placeholder="Email" autocomplete="email" required><input id="n" placeholder="Pseudo (affiché dans l'équipe)" hidden>
-<input id="p" type="password" placeholder="Mot de passe (8 caractères min.)" autocomplete="current-password" required minlength="8"><input id="i" placeholder="Code d'invitation" hidden>
-<div id="e"></div><button class="p" id="b">Se connecter</button><a id="t">Créer un compte</a></form>
-<script src="vendor/supabase.js"></script><script src="config.js"></script>
-<script>const C=window.APP_CONFIG,$=s=>document.getElementById(s);let reg=false;
-if(!C||/VOTRE/.test(C.SUPABASE_URL))$('e').textContent='Configure config.js (URL et clé Supabase).';
-const sb=supabase.createClient(C.SUPABASE_URL,C.SUPABASE_ANON_KEY);
-sb.auth.getSession().then(({data})=>{if(data.session)location.href='index.html'});
-$('t').onclick=()=>{reg=!reg;$('i').hidden=$('n').hidden=!reg;$('n').required=reg;$('b').textContent=reg?'Créer le compte':'Se connecter';$('t').textContent=reg?"J'ai déjà un compte":'Créer un compte'};
-$('f').onsubmit=async e=>{e.preventDefault();$('e').textContent='';$('b').disabled=true;const email=$('m').value.trim(),password=$('p').value;
- const r=reg?await sb.auth.signUp({email,password,options:{data:{name:$('n').value.trim(),invite:$('i').value.trim()}}}):await sb.auth.signInWithPassword({email,password});
- $('b').disabled=false;
- if(r.error){
-  console.error(r.error);
-  $('e').textContent = r.error.message;
-  return;
+```html
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Connexion · FiveM Tracker</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{color-scheme:dark}
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0c0c0e;color:#e8e8ea;font:14px system-ui,sans-serif}
+form{background:#1a1b1f;border:1px solid #2c2e34;border-radius:14px;padding:24px;width:min(340px,92vw);display:grid;gap:10px}
+h2{margin:0}
+b{color:#e5383b}
+input,button{font:inherit;color:inherit;background:#23252a;border:1px solid #2c2e34;border-radius:8px;padding:10px}
+button{cursor:pointer}
+.p{background:#e5383b;border-color:#e5383b;font-weight:700;color:#fff}
+a{color:#8b8d94;cursor:pointer;font-size:12px;text-align:center}
+#e{color:#f4c430;min-height:1em}
+</style>
+</head>
+<body>
+
+<form id="f">
+<h2>🚗 FiveM <b>Tracker</b></h2>
+
+<input id="m" type="text" placeholder="Pseudo ou adresse email" autocomplete="username" required>
+
+<input id="n" placeholder="Pseudo (affiché dans l'équipe)" hidden>
+
+<input id="p" type="password" placeholder="Mot de passe (8 caractères min.)" autocomplete="current-password" required minlength="8">
+
+<input id="i" placeholder="Code d'invitation" hidden>
+
+<div id="e"></div>
+
+<button class="p" id="b">Se connecter</button>
+<a id="t">Créer un compte</a>
+</form>
+
+<script src="vendor/supabase.js"></script>
+<script src="config.js"></script>
+
+<script>
+const C=window.APP_CONFIG;
+const $=s=>document.getElementById(s);
+let reg=false;
+
+if(!C || /VOTRE/.test(C.SUPABASE_URL)){
+  $('e').textContent='Configure config.js (URL et clé Supabase).';
 }
- if(!r.data.session){$('e').textContent="Compte créé. Confirme ton email, puis connecte-toi (ou désactive la confirmation dans Supabase).";return}
- location.href='index.html'};</script></body></html>
+
+const sb=supabase.createClient(
+  C.SUPABASE_URL,
+  C.SUPABASE_ANON_KEY
+);
+
+sb.auth.getSession().then(({data})=>{
+  if(data.session) location.href='index.html';
+});
+
+$('t').onclick=()=>{
+  reg=!reg;
+  $('i').hidden=$('n').hidden=!reg;
+  $('n').required=reg;
+  $('b').textContent=reg?'Créer le compte':'Se connecter';
+  $('t').textContent=reg?"J'ai déjà un compte":'Créer un compte';
+  $('m').placeholder=reg?'Adresse email':'Pseudo ou adresse email';
+  $('m').type=reg?'email':'text';
+  $('p').autocomplete=reg?'new-password':'current-password';
+};
+
+$('f').onsubmit=async e=>{
+  e.preventDefault();
+  $('e').textContent='';
+  $('b').disabled=true;
+
+  const identifier=$('m').value.trim();
+  const password=$('p').value;
+  let email=identifier;
+
+  try {
+    if(!reg && !identifier.includes('@')){
+      // Recherche du compte correspondant au pseudo
+      const {data,error}=await sb
+        .from('profiles')
+        .select('id')
+        .ilike('name',identifier)
+        .maybeSingle();
+
+      if(error) throw error;
+      if(!data) throw new Error('Pseudo introuvable.');
+
+      const {data:userData,error:userError}=await sb
+        .rpc('get_login_email_by_profile', {profile_id:data.id});
+
+      if(userError) throw userError;
+      if(!userData) throw new Error('Email du compte introuvable.');
+
+      email=userData;
+    }
+
+    const r=reg
+      ? await sb.auth.signUp({
+          email,
+          password,
+          options:{
+            data:{
+              name:$('n').value.trim(),
+              invite:$('i').value.trim()
+            }
+          }
+        })
+      : await sb.auth.signInWithPassword({email,password});
+
+    if(r.error) throw r.error;
+
+    if(!r.data.session){
+      $('e').textContent='Compte créé. Vérifie ta configuration de confirmation email.';
+      return;
+    }
+
+    location.href='index.html';
+
+  }catch(err){
+    console.error(err);
+    $('e').textContent=err.message || 'Une erreur est survenue.';
+  }finally{
+    $('b').disabled=false;
+  }
+};
+</script>
+</body>
+</
